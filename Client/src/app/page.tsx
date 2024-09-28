@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { FileText, CheckSquare, Settings, FileIcon, ImageIcon, CodeIcon } from 'lucide-react'
 
-const ParticleBackground = () => {
+const MorandiBackground = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     useEffect(() => {
@@ -19,16 +20,18 @@ const ParticleBackground = () => {
         canvas.width = window.innerWidth
         canvas.height = window.innerHeight
 
-        const particles: { x: number; y: number; size: number; speedX: number; speedY: number }[] = []
-        const particleCount = 100
+        const particles: { x: number; y: number; size: number; speedX: number; speedY: number; color: string }[] = []
+        const particleCount = 50
+        const colors = ['#D5C3BB', '#E6E2DD', '#9C8E85', '#7D7168', '#C8B5AD']
 
         for (let i = 0; i < particleCount; i++) {
             particles.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                size: Math.random() * 5 + 1,
-                speedX: Math.random() * 3 - 1.5,
-                speedY: Math.random() * 3 - 1.5
+                size: Math.random() * 4 + 1,
+                speedX: Math.random() * 0.5 - 0.25,
+                speedY: Math.random() * 0.5 - 0.25,
+                color: colors[Math.floor(Math.random() * colors.length)]
             })
         }
 
@@ -36,7 +39,7 @@ const ParticleBackground = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
             particles.forEach((particle) => {
-                ctx.fillStyle = 'rgba(200, 200, 200, 0.5)'
+                ctx.fillStyle = particle.color
                 ctx.beginPath()
                 ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
                 ctx.fill()
@@ -68,6 +71,13 @@ const ParticleBackground = () => {
     return <canvas ref={canvasRef} className="fixed inset-0 -z-10" />
 }
 
+const Logo = () => (
+    <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="25" r="20" fill="#D5C3BB" />
+        <path d="M15 25L22 32L35 19" stroke="#7D7168" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+)
+
 const NoteTemplates = () => {
     const templates = [
         { icon: FileIcon, title: 'Blank Document', description: 'Start with a clean slate' },
@@ -76,75 +86,90 @@ const NoteTemplates = () => {
     ]
 
     return (
-        <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-4">Note Templates</h2>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            className="mt-12"
+        >
+            <h2 className="text-2xl font-bold mb-4 text-[#7D7168]">Note Templates</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {templates.map((template, index) => (
-                    <Card key={index} className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <template.icon className="mr-2 h-5 w-5" />
-                                {template.title}
-                            </CardTitle>
-                            <CardDescription>{template.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button className="w-full">Use Template</Button>
-                        </CardContent>
-                    </Card>
+                    <motion.div
+                        key={index}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <Card className="hover:shadow-lg transition-shadow bg-[#F0EBE8] border-[#D5C3BB]">
+                            <CardHeader>
+                                <CardTitle className="flex items-center text-[#7D7168]">
+                                    <template.icon className="mr-2 h-5 w-5" />
+                                    {template.title}
+                                </CardTitle>
+                                <CardDescription className="text-[#9C8E85]">{template.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button className="w-full bg-[#D5C3BB] text-[#7D7168] hover:bg-[#C8B5AD]">Use Template</Button>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 ))}
             </div>
-        </div>
+        </motion.div>
     )
 }
 
 export default function Home() {
+    const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+
     return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
-            <ParticleBackground />
+        <div className="flex items-center justify-center min-h-screen bg-[#E6E2DD]">
+            <MorandiBackground />
             <div className="space-y-6 max-w-6xl w-full p-6">
-                <h1 className="text-4xl font-bold text-center mb-8">Welcome to Your Workspace</h1>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                            <CardTitle>Documents</CardTitle>
-                            <CardDescription>Manage your documents and notes</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button asChild className="w-full">
-                                <Link href="/documents">
-                                    <FileText className="mr-2 h-4 w-4" /> Enter Documents
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                            <CardTitle>Todos</CardTitle>
-                            <CardDescription>Manage your tasks and reminders</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button asChild className="w-full">
-                                <Link href="/todos">
-                                    <CheckSquare className="mr-2 h-4 w-4" /> Enter Todos
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    <Card className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                            <CardTitle>Settings</CardTitle>
-                            <CardDescription>Configure your workspace</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Button asChild className="w-full">
-                                <Link href="/settings">
-                                    <Settings className="mr-2 h-4 w-4" /> Open Settings
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="flex items-center justify-center mb-8"
+                >
+                    <Logo />
+                    <h1 className="text-4xl font-bold text-center ml-4 text-[#7D7168]">Welcome to Your Workspace</h1>
+                </motion.div>
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                >
+                    {[
+                        { title: 'Documents', description: 'Manage your documents and notes', icon: FileText, href: '/documents' },
+                        { title: 'Todos', description: 'Manage your tasks and reminders', icon: CheckSquare, href: '/todos' },
+                        { title: 'Settings', description: 'Configure your workspace', icon: Settings, href: '/settings' },
+                    ].map((item, index) => (
+                        <motion.div
+                            key={index}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onHoverStart={() => setHoveredCard(item.title)}
+                            onHoverEnd={() => setHoveredCard(null)}
+                        >
+                            <Card className="hover:shadow-lg transition-shadow bg-[#F0EBE8] border-[#D5C3BB]">
+                                <CardHeader>
+                                    <CardTitle className="text-[#7D7168]">{item.title}</CardTitle>
+                                    <CardDescription className="text-[#9C8E85]">{item.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Button asChild className="w-full bg-[#D5C3BB] text-[#7D7168] hover:bg-[#C8B5AD]">
+                                        <Link href={item.href}>
+                                            <item.icon className="mr-2 h-4 w-4" />
+                                            {hoveredCard === item.title ? `Enter ${item.title}` : `View ${item.title}`}
+                                        </Link>
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </motion.div>
                 <NoteTemplates />
             </div>
         </div>

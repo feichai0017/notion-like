@@ -1,11 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { AddTodoForm } from '@/components/AddTodoForm'
 import { TodoList } from '@/components/TodoList'
+import { motion } from 'framer-motion'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type Todo = {
     id: number;
@@ -13,13 +15,27 @@ type Todo = {
     completed: boolean;
     date: Date;
     time: string;
+    emailReminder: boolean;
+}
+
+const MorandiBackground = () => {
+    return (
+        <div className="fixed inset-0 -z-10">
+            <div className="absolute inset-0 bg-[#E6E2DD]">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#D5C3BB] via-[#E6E2DD] to-[#D1D5DB] opacity-40" />
+            </div>
+            <div className="absolute inset-0">
+                <div className="h-full w-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCI+CjxyZWN0IHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgZmlsbD0iI2U2ZTJkZCI+PC9yZWN0Pgo8Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSIxLjUiIGZpbGw9IiNkNWMzYmIiIGZpbGwtb3BhY2l0eT0iMC40Ij48L2NpcmNsZT4KPC9zdmc+')] opacity-30" />
+            </div>
+        </div>
+    )
 }
 
 export default function TodosPage() {
     const [todos, setTodos] = useState<Todo[]>([
-        { id: 1, text: 'Complete project proposal', completed: false, date: new Date(), time: '14:00' },
-        { id: 2, text: 'Schedule team meeting', completed: true, date: new Date(Date.now() + 86400000), time: '10:00' },
-        { id: 3, text: 'Prepare presentation slides', completed: false, date: new Date(Date.now() + 172800000), time: '16:00' },
+        { id: 1, text: 'Complete project proposal', completed: false, date: new Date(), time: '14:00', emailReminder: false },
+        { id: 2, text: 'Schedule team meeting', completed: true, date: new Date(Date.now() + 86400000), time: '10:00', emailReminder: true },
+        { id: 3, text: 'Prepare presentation slides', completed: false, date: new Date(Date.now() + 172800000), time: '16:00', emailReminder: false },
     ])
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
@@ -31,82 +47,130 @@ export default function TodosPage() {
                     const todoDateTime = new Date(todo.date)
                     todoDateTime.setHours(parseInt(todo.time.split(':')[0]), parseInt(todo.time.split(':')[1]))
                     if (todoDateTime <= now) {
-                        // In a real app, you'd show a notification here
                         console.log(`Reminder: ${todo.text}`)
+                        if (todo.emailReminder) {
+                            console.log(`Sending email reminder for: ${todo.text}`)
+                            // Here you would implement the email sending logic
+                        }
                     }
                 }
             })
-        }, 60000) // Check every minute
+        }, 60000)
 
         return () => clearInterval(checkReminders)
     }, [todos])
 
-    const addTodo = (text: string, date: Date, time: string) => {
-        setTodos([...todos, {
+    const addTodo = useCallback((text: string, date: Date, time: string, emailReminder: boolean) => {
+        setTodos(prevTodos => [...prevTodos, {
             id: Date.now(),
             text,
             completed: false,
             date,
-            time
+            time,
+            emailReminder
         }])
-    }
+    }, [])
 
-    const toggleTodo = (id: number) => {
-        setTodos(todos.map(todo =>
+    const toggleTodo = useCallback((id: number) => {
+        setTodos(prevTodos => prevTodos.map(todo =>
             todo.id === id ? { ...todo, completed: !todo.completed } : todo
         ))
-    }
+    }, [])
+
+    const toggleEmailReminder = useCallback((id: number) => {
+        setTodos(prevTodos => prevTodos.map(todo =>
+            todo.id === id ? { ...todo, emailReminder: !todo.emailReminder } : todo
+        ))
+    }, [])
 
     const filteredTodos = todos.filter(todo =>
         selectedDate && todo.date.toDateString() === selectedDate.toDateString()
     )
 
     return (
-        <div className="container mx-auto p-6 max-w-6xl">
-            <h1 className="text-4xl font-bold mb-8 text-center">Reminders</h1>
-            <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
-                <Card className="md:w-2/5 lg:w-1/3">
-                    <CardHeader>
-                        <CardTitle className="text-2xl">Calendar</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            className="rounded-md border p-4"
-                            classNames={{
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                day_today: "bg-accent text-accent-foreground",
-                                day: "h-10 w-10 text-center leading-10 rounded-full hover:bg-accent hover:text-accent-foreground",
-                                head_cell: "text-muted-foreground font-normal text-sm",
-                                nav_button: "border rounded-md p-1 hover:bg-accent hover:text-accent-foreground",
-                                table: "w-full border-collapse space-y-1",
-                            }}
-                        />
-                    </CardContent>
-                </Card>
-                <div className="md:w-3/5 lg:w-2/3 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-2xl">Add New Reminder</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <AddTodoForm onAddTodo={addTodo} />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-2xl">
-                                {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a date"}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <TodoList todos={filteredTodos} onToggleTodo={toggleTodo} />
-                        </CardContent>
-                    </Card>
-                </div>
+        <>
+            <MorandiBackground />
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="w-full max-w-7xl bg-[#F0EBE8] rounded-lg shadow-lg overflow-hidden"
+                >
+                    <div className="p-8">
+                        <h1 className="text-5xl font-bold mb-12 text-center text-[#7D7168]">Reminders</h1>
+                        <div className="flex flex-col lg:flex-row space-y-8 lg:space-y-0 lg:space-x-8">
+                            <Card className="lg:w-1/2 bg-[#E6E2DD] border-none shadow-md">
+                                <CardHeader>
+                                    <CardTitle className="text-4xl text-[#7D7168] text-center">Calendar</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Calendar
+                                        mode="single"
+                                        selected={selectedDate}
+                                        onSelect={setSelectedDate}
+                                        className="rounded-md border-none text-[#7D7168]"
+                                        classNames={{
+                                            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                                            month: "space-y-4",
+                                            caption: "flex justify-center pt-1 relative items-center text-2xl font-semibold",
+                                            caption_label: "text-[#7D7168]",
+                                            nav: "space-x-1 flex items-center",
+                                            nav_button: "h-10 w-10 bg-[#D5C3BB] rounded-full flex items-center justify-center text-[#7D7168] hover:bg-[#C8B5AD] transition-colors",
+                                            nav_button_previous: "absolute left-1",
+                                            nav_button_next: "absolute right-1",
+                                            table: "w-full border-collapse space-y-1",
+                                            head_row: "flex",
+                                            head_cell: "text-[#9C8E85] rounded-md w-14 font-normal text-[0.875rem] m-0.5 text-center",
+                                            row: "flex w-full mt-2",
+                                            cell: "text-center text-lg p-0 relative [&:has([aria-selected])]:bg-[#D5C3BB] first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20 m-0.5",
+                                            day: "h-14 w-14 p-0 font-normal aria-selected:opacity-100 hover:bg-[#E0D8D3] rounded-full transition-colors flex items-center justify-center",
+                                            day_selected: "bg-[#D5C3BB] text-[#7D7168] hover:bg-[#C8B5AD] hover:text-[#7D7168] focus:bg-[#C8B5AD] focus:text-[#7D7168] rounded-full",
+                                            day_today: "bg-[#E0D8D3] text-[#7D7168] rounded-full",
+                                            day_outside: "text-[#9C8E85] opacity-50",
+                                            day_disabled: "text-[#9C8E85] opacity-50",
+                                            day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                            day_hidden: "invisible",
+                                        }}
+                                        components={{
+                                            IconLeft: ({ ...props }) => (
+                                                <ChevronLeft className="h-6 w-6" />
+                                            ),
+                                            IconRight: ({ ...props }) => (
+                                                <ChevronRight className="h-6 w-6" />
+                                            ),
+                                        }}
+                                    />
+                                </CardContent>
+                            </Card>
+                            <div className="lg:w-1/2 space-y-8">
+                                <Card className="bg-[#E6E2DD] border-none shadow-md">
+                                    <CardHeader>
+                                        <CardTitle className="text-3xl text-[#7D7168]">Add New Reminder</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <AddTodoForm onAddTodo={addTodo} />
+                                    </CardContent>
+                                </Card>
+                                <Card className="bg-[#E6E2DD] border-none shadow-md">
+                                    <CardHeader>
+                                        <CardTitle className="text-3xl text-[#7D7168]">
+                                            {selectedDate ? format(selectedDate, "MMMM d, yyyy") : "Select a date"}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <TodoList
+                                            todos={filteredTodos}
+                                            onToggleTodo={toggleTodo}
+                                            onToggleEmailReminder={toggleEmailReminder}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
             </div>
-        </div>
+        </>
     )
 }
