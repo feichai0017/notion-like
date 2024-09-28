@@ -2,11 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yourusername/notion-like-app)](https://goreportcard.com/report/github.com/yourusername/notion-like-app)
-[![React](https://img.shields.io/badge/React-18.0.2-blue.svg)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8.svg)](https://golang.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
-[![GitHub issues](https://img.shields.io/github/issues/feichai0017/notion-like-app.svg)](https://github.com/feichai0017/notion-like-app/issues)
-[![GitHub stars](https://img.shields.io/github/stars/feichai0017/notion-like-app.svg)](https://github.com/feichai0017/notion-like-app/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/feichai0017/notion-like.svg)](https://github.com/feichai0017/notion-like/issues)
+[![GitHub stars](https://img.shields.io/github/stars/feichai0017/notion-like.svg)](https://github.com/feichai0017/notion-like/stargazers)
 
 
 A powerful and flexible Notion-like application for document management, task organization, and collaborative work. Built with Go and React, this application offers a seamless experience for creating, editing, and organizing your digital workspace.
