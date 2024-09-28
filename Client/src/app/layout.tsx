@@ -16,10 +16,10 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-    title: "Notion Clone",
+    title: "Notion-Like",
     description: "A Notion-like application with document management and todo lists",
     icons: {
-        icon: './favicon.ico',
+        icon: '/favicon.ico',
     },
 }
 
@@ -30,9 +30,6 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-        <head>
-            <link rel="icon" href="./favicon.ico" sizes="any" />
-        </head>
         <body className="bg-background text-foreground antialiased">
         <ClientWrapper>
             {children}

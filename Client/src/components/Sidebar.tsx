@@ -16,7 +16,7 @@ export default function Sidebar() {
         <div className="w-64 bg-gray-100 p-4 flex flex-col h-full">
             <div className="flex items-center mb-6">
                 <Package2 className="h-6 w-6 mr-2"/>
-                <span className="text-xl font-semibold">Notion Clone</span>
+                <span className="text-xl font-semibold">Notion-Like</span>
             </div>
             <nav className="space-y-2">
                 <Button asChild variant="ghost" className="w-full justify-start">
