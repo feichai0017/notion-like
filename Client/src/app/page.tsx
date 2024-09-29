@@ -35,6 +35,14 @@ const MorandiBackground = () => {
             })
         }
 
+        let mouseX = 0
+        let mouseY = 0
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX
+            mouseY = e.clientY
+        })
+
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -43,6 +51,18 @@ const MorandiBackground = () => {
                 ctx.beginPath()
                 ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
                 ctx.fill()
+
+                // Calculate distance between particle and mouse
+                const dx = mouseX - particle.x
+                const dy = mouseY - particle.y
+                const distance = Math.sqrt(dx * dx + dy * dy)
+
+                // Move particles away from mouse
+                if (distance < 100) {
+                    const angle = Math.atan2(dy, dx)
+                    particle.x -= Math.cos(angle) * 1
+                    particle.y -= Math.sin(angle) * 1
+                }
 
                 particle.x += particle.speedX
                 particle.y += particle.speedY
@@ -65,6 +85,7 @@ const MorandiBackground = () => {
 
         return () => {
             window.removeEventListener('resize', handleResize)
+            canvas.removeEventListener('mousemove', () => {})
         }
     }, [])
 

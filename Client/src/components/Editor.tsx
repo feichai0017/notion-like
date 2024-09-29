@@ -1,97 +1,130 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useCallback, useEffect, useMemo } from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { markdown } from '@codemirror/lang-markdown'
+import { StreamLanguage } from '@codemirror/language'
+import { stex } from '@codemirror/legacy-modes/mode/stex'
+import { EditorView } from '@codemirror/view'
+import { linter, Diagnostic } from '@codemirror/lint'
 
 interface EditorProps {
     content: string
     setContent: (content: string) => void
     isAIMode: boolean
-    fontSize: number
-    fontFamily: string
-    textColor: string
-    backgroundColor: string
+    format: 'latex' | 'markdown'
     onSave: () => void
 }
 
 export function Editor({
-                           content,
-                           setContent,
-                           isAIMode,
-                           fontSize,
-                           fontFamily,
-                           textColor,
-                           backgroundColor,
-                           onSave
-                       }: EditorProps) {
-    const editorRef = useRef<HTMLDivElement>(null)
-    const [isComposing, setIsComposing] = useState(false)
+    content,
+    setContent,
+    isAIMode,
+    format,
+    onSave
+}: EditorProps) {
+    const handleChange = useCallback((value: string) => {
+        setContent(value)
+    }, [setContent])
 
     useEffect(() => {
         const saveInterval = setInterval(onSave, 30000) // Auto-save every 30 seconds
         return () => clearInterval(saveInterval)
     }, [onSave])
 
-    useEffect(() => {
-        if (editorRef.current) {
-            editorRef.current.innerHTML = content
-        }
-    }, [content])
+    const latexLinter = useMemo(() => linter((view) => {
+        const diagnostics: Diagnostic[] = []
+        const text = view.state.doc.toString()
+        const lines = text.split('\n')
 
-    const handleInput = () => {
-        if (editorRef.current && !isComposing) {
-            setContent(editorRef.current.innerHTML)
-        }
-    }
+        lines.forEach((line, index) => {
+            // Check for unbalanced braces
+            const openBraces = (line.match(/\{/g) || []).length
+            const closeBraces = (line.match(/\}/g) || []).length
+            if (openBraces !== closeBraces) {
+                diagnostics.push({
+                    from: view.state.doc.line(index + 1).from,
+                    to: view.state.doc.line(index + 1).to,
+                    severity: 'error',
+                    message: 'Unbalanced braces in this line'
+                })
+            }
 
-    const handleCompositionStart = () => {
-        setIsComposing(true)
-    }
+            // Check for unbalanced dollar signs (inline math)
+            const dollarSigns = (line.match(/\$/g) || []).length
+            if (dollarSigns % 2 !== 0) {
+                diagnostics.push({
+                    from: view.state.doc.line(index + 1).from,
+                    to: view.state.doc.line(index + 1).to,
+                    severity: 'error',
+                    message: 'Unbalanced dollar signs in this line'
+                })
+            }
 
-    const handleCompositionEnd = () => {
-        setIsComposing(false)
-        if (editorRef.current) {
-            setContent(editorRef.current.innerHTML)
-        }
-    }
+            // Add more LaTeX-specific checks here
+        })
 
-    const handleFocus = () => {
-        if (editorRef.current) {
-            // Move cursor to the end of the content
-            const range = document.createRange()
-            const selection = window.getSelection()
-            range.selectNodeContents(editorRef.current)
-            range.collapse(false)
-            selection?.removeAllRanges()
-            selection?.addRange(range)
+        return diagnostics
+    }), [])
+
+    const getLanguageExtension = useMemo(() => {
+        if (format === 'latex') {
+            return [StreamLanguage.define(stex), latexLinter]
         }
-    }
+        return [markdown()]
+    }, [format, latexLinter])
+
+    const theme = useMemo(() => {
+        return EditorView.theme({
+            "&": {
+                height: "100%",
+                fontSize: "16px",
+                backgroundColor: "#F0EBE8",
+                color: "#7D7168"
+            },
+            ".cm-scroller": {
+                overflow: "auto"
+            },
+            ".cm-content": {
+                caretColor: "#9C8E85"
+            },
+            ".cm-cursor": {
+                borderLeftColor: "#9C8E85"
+            },
+            "&.cm-focused .cm-selectionBackground, ::selection": {
+                backgroundColor: "#D5C3BB"
+            },
+            ".cm-gutters": {
+                backgroundColor: "#E6E2DD",
+                color: "#9C8E85",
+                border: "none"
+            },
+            ".cm-activeLineGutter": {
+                backgroundColor: "#D5C3BB"
+            },
+            ".cm-line": {
+                padding: "0 4px"
+            },
+            ".cm-errorDeco": {
+                backgroundColor: "rgba(255, 0, 0, 0.2)",
+                borderLeft: "3px solid #FF0000"
+            }
+        }, { dark: false })
+    }, [])
 
     return (
-        <motion.div
-            className="flex-grow overflow-auto p-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-        >
-            <div
-                ref={editorRef}
-                contentEditable
-                onInput={handleInput}
-                onFocus={handleFocus}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={handleCompositionEnd}
-                className="min-h-full outline-none"
-                style={{
-                    fontSize: `${fontSize}px`,
-                    fontFamily,
-                    color: textColor,
-                    backgroundColor,
-                }}
+        <div className="h-full overflow-hidden rounded-lg shadow-inner bg-morandi-bg-light">
+            <CodeMirror
+                value={content}
+                height="100%"
+                extensions={getLanguageExtension}
+                onChange={handleChange}
+                theme={theme}
+                className="h-full"
             />
             {isAIMode && (
-                <div className="fixed bottom-20 right-8 bg-[#D5C3BB] text-[#7D7168] p-4 rounded-lg shadow-lg">
+                <div className="fixed bottom-20 right-8 bg-morandi-accent text-morandi-text-primary p-4 rounded-lg shadow-lg">
                     AI Mode is active. Start typing for suggestions...
                 </div>
             )}
-        </motion.div>
+        </div>
     )
 }

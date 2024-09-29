@@ -19,7 +19,7 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	err := godotenv.Load()
+	err := godotenv.Load("/Volumes/T7/my-projects/notion-like/Server/.env")
 	if err != nil {
 		return nil, err
 	}

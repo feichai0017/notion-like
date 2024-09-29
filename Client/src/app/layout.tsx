@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
 import ClientWrapper from '@/components/ClientWrapper'
+import { Sidebar } from '@/components/Sidebar'
 
 const geistSans = localFont({
     src: "./fonts/GeistVF.woff",
@@ -24,17 +25,21 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({
-                                       children,
-                                   }: {
+    children,
+}: {
     children: React.ReactNode
 }) {
     return (
         <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-        <body className="bg-background text-foreground antialiased">
-        <ClientWrapper>
-            {children}
-        </ClientWrapper>
-        </body>
+            <body className="bg-background text-foreground antialiased">
+                <ClientWrapper>
+                    <div className="flex h-screen">
+                        <main className="flex-1 overflow-auto">
+                            {children}
+                        </main>
+                    </div>
+                </ClientWrapper>
+            </body>
         </html>
     )
 }

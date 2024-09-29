@@ -9,11 +9,15 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
+	// 使用 CORS 中间件
+	r.Use(middlewares.CORSMiddleware())
+
 	// 公共路由
 	public := r.Group("/api")
 	{
 		public.POST("/register", handlers.Register)
 		public.POST("/login", handlers.Login)
+		public.POST("/compile-latex", handlers.CompileLatex)
 	}
 
 	// 需要认证的路由

@@ -10,6 +10,11 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
+			'morandi-bg-light': '#F0EBE8',
+			'morandi-bg-dark': '#E6E2DD',
+			'morandi-text-primary': '#7D7168',
+			'morandi-text-secondary': '#9C8E85',
+			'morandi-accent': '#D5C3BB',
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
