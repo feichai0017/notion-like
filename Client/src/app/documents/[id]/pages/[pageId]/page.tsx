@@ -1,24 +1,26 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import api from '@/app/api/completion/route'
+import { api } from '@/app/api/completion/route'
 import { DocumentHeader } from '@/components/DocumentHeader'
 import { Editor } from '@/components/Editor'
 import { FormatToolbar } from '@/components/FormatToolbar'
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, Play, Edit2, Eye, Download, ExternalLink } from 'lucide-react'
+import { ChevronLeft, Play, Edit2, Eye, Download, ExternalLink, ZoomIn, ZoomOut } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
+import { debounce } from 'lodash'
 import * as pdfjsLib from 'pdfjs-dist'
+import mermaid from 'mermaid'
 
-// Ensure the worker is correctly set
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.min.mjs`
+mermaid.initialize({ startOnLoad: false })
 
 type SubPage = {
   id: string
@@ -26,7 +28,7 @@ type SubPage = {
   content: string
 }
 
-type Format = 'latex' | 'markdown'
+type Format = 'latex' | 'markdown' | 'mermaid'
 
 export default function SubPageEditingPage() {
   const { id, pageId } = useParams()
@@ -43,16 +45,24 @@ export default function SubPageEditingPage() {
   const [latexError, setLatexError] = useState<string | null>(null)
   const [isCompiling, setIsCompiling] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [autoCompile, setAutoCompile] = useState(false)
+  const [mermaidSvg, setMermaidSvg] = useState<string | null>(null)
+  const [mermaidScale, setMermaidScale] = useState(1)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
+  const mermaidRef = useRef<HTMLDivElement>(null)
+  const [pdfPageNum, setPdfPageNum] = useState(1)
+  const [pdfNumPages, setPdfNumPages] = useState(0)
+  const pdfRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchSubPage = async () => {
       try {
-        // Simulating API call
+        // const response = await api.getDocument(pageId as string)
+        // const fetchedSubPage = response.data
         const mockSubPage: SubPage = {
           id: pageId as string,
           title: 'Sample Document',
-          content: '# Sample Content\n\nThis is a sample document with some content.',
+          content: '# Sample Content\n\nThis is a sample document with some content.\n\n```mermaid\ngraph TD;\n    A[Client] -->|TCP Connection| B(Load Balancer)\n    B -->|Forwards Request| C{Web Server}\n    C -->|Processes Request| D[Database]\n    C -->|Sends Response| A\n```',
         }
         setSubPage(mockSubPage)
         setTitle(mockSubPage.title)
@@ -68,23 +78,54 @@ export default function SubPageEditingPage() {
   }, [pageId])
 
   useEffect(() => {
-    if (format === 'latex') {
-      setIsPreviewMode(true)
+    if (format === 'mermaid' && isPreviewMode) {
+      renderMermaidDiagram()
     }
-  }, [format])
+  }, [content, format, isPreviewMode])
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (format === 'latex' && autoCompile) {
+      compileLatex(content)
+    }
+  }, [content, format, autoCompile])
+
+  const renderMermaidDiagram = async () => {
+    try {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        fontFamily: 'Arial, sans-serif',
+      })
+      const { svg } = await mermaid.render('mermaid-diagram', content)
+      setMermaidSvg(svg)
+    } catch (error) {
+      console.error('Error rendering Mermaid diagram:', error)
+      setMermaidSvg(`<pre>${content}</pre>`)
+    }
+  }
+
+  const handleSave = useCallback(debounce(async () => {
     setIsSaving(true)
     // Simulating API call
     setTimeout(() => {
       setIsSaving(false)
     }, 1000)
-  }
+  }, 1000), [])
+  //   try {
+  //     await api.updateDocument(pageId as string, { title, content })
+  //   } catch (error) {
+  //     console.error('Error saving document:', error)
+  //   } finally {
+  //     setIsSaving(false)
+  //   }
+  // }, 1000), [pageId, title, content])
 
   const handleFormatChange = (newFormat: Format) => {
     setFormat(newFormat)
     setCompiledPdfUrl(null)
     setLatexError(null)
+    setIsPreviewMode(newFormat === 'latex')
   }
 
   const togglePreviewMode = () => {
@@ -93,14 +134,50 @@ export default function SubPageEditingPage() {
     }
   }
 
-  const renderPDF = async (pdfData: Uint8Array) => {
-    if (!pdfContainerRef.current) return;
+  const handleFormat = (type: string) => {
+    // Implement formatting logic here
+  }
+
+  const handleExport = () => {
+    // Implement export logic here
+  }
+
+  const zoomInMermaid = () => setMermaidScale(prevScale => Math.min(prevScale + 0.1, 2))
+  const zoomOutMermaid = () => setMermaidScale(prevScale => Math.max(prevScale - 0.1, 0.5))
+
+  const compileLatex = useCallback(debounce(async (latexContent: string) => {
+    setIsCompiling(true)
+    setLatexError(null)
   
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfData })
-      const pdf = await loadingTask.promise
-      const page = await pdf.getPage(1)
+      const response = await api.compileLatex(latexContent)
   
+      if (response.data && response.data.status === 'success' && response.data.pdfData) {
+        const pdfData = base64ToUint8Array(response.data.pdfData)
+        const pdfBlob = new Blob([pdfData], { type: 'application/pdf' })
+        const pdfUrl = URL.createObjectURL(pdfBlob)
+        setCompiledPdfUrl(pdfUrl)
+      } else {
+        throw new Error(response.data?.message || 'Compilation failed')
+      }
+    } catch (error: any) {
+      console.error('LaTeX compilation error:', error)
+      setLatexError(error.message || 'An error occurred during LaTeX compilation')
+    } finally {
+      setIsCompiling(false)
+    }
+  }, 1000), [])
+  
+  // 更新 renderPDF 函数
+  const renderPDF = async (pdfUrl: string) => {
+    if (!pdfRef.current) return
+  
+    try {
+      const loadingTask = pdfjsLib.getDocument(pdfUrl)
+      const pdf = await loadingTask.promise
+      setPdfNumPages(pdf.numPages)
+  
+      const page = await pdf.getPage(pdfPageNum)
       const scale = 1.5
       const viewport = page.getViewport({ scale })
   
@@ -118,46 +195,12 @@ export default function SubPageEditingPage() {
   
         await page.render(renderContext).promise
   
-        pdfContainerRef.current.innerHTML = ''
-        pdfContainerRef.current.appendChild(canvas)
+        pdfRef.current.innerHTML = ''
+        pdfRef.current.appendChild(canvas)
       }
     } catch (error) {
       console.error('Error rendering PDF:', error)
       setLatexError('Error rendering PDF. Please try again.')
-    }
-  }
-
-  const handleCompile = async () => {
-    setIsCompiling(true)
-    setLatexError(null)
-    setCompiledPdfUrl(null)
-  
-    try {
-      const response = await api.compileLatex(content)
-  
-      // 检查响应是否为 JSON 格式
-      if (response.headers['content-type'].includes('application/json')) {
-        const data = response.data
-  
-        if (data.status === 'success' && data.pdfData) {
-          const pdfData = base64ToUint8Array(data.pdfData)
-          await renderPDF(pdfData)
-          
-          // Create a Blob from the PDF data
-          const pdfBlob = new Blob([pdfData], { type: 'application/pdf' })
-          const pdfUrl = URL.createObjectURL(pdfBlob)
-          setCompiledPdfUrl(pdfUrl)
-        } else {
-          throw new Error(data.message || 'Compilation failed')
-        }
-      } else {
-        throw new Error('Unexpected response format from server')
-      }
-    } catch (error: any) {
-      console.error('LaTeX compilation error:', error)
-      setLatexError(error.message || 'An error occurred during LaTeX compilation')
-    } finally {
-      setIsCompiling(false)
     }
   }
 
@@ -169,64 +212,6 @@ export default function SubPageEditingPage() {
       bytes[i] = binaryString.charCodeAt(i)
     }
     return bytes
-  }
-
-  const handleFormat = (type: string) => {
-    let updatedContent = content
-    const selection = window.getSelection()
-    const selectedText = selection?.toString() || ''
-
-    switch (type) {
-      case 'bold':
-        updatedContent = selectedText ? content.replace(selectedText, `**${selectedText}**`) : `**${content}**`
-        break
-      case 'italic':
-        updatedContent = selectedText ? content.replace(selectedText, `*${selectedText}*`) : `*${content}*`
-        break
-      case 'unordered-list':
-        updatedContent = selectedText ? content.replace(selectedText, `\n- ${selectedText}`) : `${content}\n- `
-        break
-      case 'ordered-list':
-        updatedContent = selectedText ? content.replace(selectedText, `\n1. ${selectedText}`) : `${content}\n1. `
-        break
-      case 'image':
-        updatedContent = `${content}\n![Image description](image_url)`
-        break
-      case 'equation':
-        updatedContent = selectedText ? content.replace(selectedText, `$${selectedText}$`) : `$${content}$`
-        break
-      case 'symbol':
-        updatedContent = `${content}α`
-        break
-      case 'matrix':
-        updatedContent = `${content}\n\n| a | b |\n|---|---|\n| c | d |`
-        break
-    }
-    setContent(updatedContent)
-  }
-
-  const handleExport = () => {
-    if (format === 'latex' && compiledPdfUrl) {
-      // Download the compiled PDF
-      const a = document.createElement('a')
-      a.href = compiledPdfUrl
-      a.download = `${title}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    } else {
-      // Export as Markdown or LaTeX source
-      const fileExtension = format === 'latex' ? 'tex' : 'md'
-      const blob = new Blob([content], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${title}.${fileExtension}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    }
   }
 
   if (isLoading) {
@@ -267,77 +252,139 @@ export default function SubPageEditingPage() {
             <SelectContent>
               <SelectItem value="markdown">Markdown</SelectItem>
               <SelectItem value="latex">LaTeX</SelectItem>
+              <SelectItem value="mermaid">Mermaid</SelectItem>
             </SelectContent>
           </Select>
           <FormatToolbar format={format} onFormat={handleFormat} />
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           {format === 'latex' && (
-            <Button variant="outline" onClick={handleCompile} disabled={isCompiling}>
-              {isCompiling ? 'Compiling...' : 'Compile'}
-            </Button>
+            <>
+              <Button
+                onClick={() => setAutoCompile(!autoCompile)}
+                variant={autoCompile ? "default" : "outline"}
+                className="text-sm"
+              >
+                {autoCompile ? "Auto Compile: On" : "Auto Compile: Off"}
+              </Button>
+              <Button
+                onClick={() => compileLatex(content)}
+                disabled={isCompiling}
+                variant="outline"
+                className="text-sm"
+              >
+                {isCompiling ? "Compiling..." : "Compile"}
+              </Button>
+            </>
           )}
           {format !== 'latex' && (
-            <Button variant="outline" onClick={togglePreviewMode}>
+            <Button variant="outline" onClick={togglePreviewMode} className="text-sm">
               {isPreviewMode ? <Edit2 className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
               {isPreviewMode ? 'Edit' : 'Preview'}
             </Button>
           )}
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} className="text-sm">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
         </div>
       </div>
       <div className="flex-grow overflow-hidden flex">
-        <div className={`h-full ${isPreviewMode || format === 'latex' ? 'w-1/2' : 'w-full'} overflow-auto`}>
+        <div className={`${isPreviewMode || format === 'latex' ? 'w-1/2' : 'w-full'} h-full`}>
           <Editor
             content={content}
             setContent={setContent}
             isAIMode={isAIMode}
             format={format}
             onSave={handleSave}
+            isPreviewMode={isPreviewMode || format === 'latex'}
           />
         </div>
         {(isPreviewMode || format === 'latex') && (
-            <div className="w-1/2 h-full overflow-auto p-8 bg-white rounded-lg shadow-inner">
-                {format === 'markdown' ? (
-                <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                    inlineMath: ({ node, ...props }) => <InlineMath math={props.children[0] as string} />,
-                    math: ({ node, ...props }) => <BlockMath math={props.children[0] as string} />,
+          <div className="w-1/2 h-full overflow-auto p-8 bg-white rounded-lg shadow-inner">
+            {format === 'markdown' && (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-4 mb-2" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-3 mb-2" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-2 mb-1" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4" {...props} />,
+                  inlineMath: ({ node, ...props }) => <InlineMath math={props.children[0] as string} />,
+                  math: ({ node, ...props }) => <BlockMath math={props.children[0] as string} />,
+                  code: ({node, inline, className, children, ...props}) => {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return !inline && match ? (
+                      <div className={match[1] === 'mermaid' ? 'mermaid' : ''}>
+                        <pre className={`${className} p-4 bg-gray-100 rounded overflow-x-auto`}>
+                          <code {...props}>{children}</code>
+                        </pre>
+                      </div>
+                    ) : (
+                      <code className={`${className} px-1 bg-gray-100 rounded`} {...props}>{children}</code>
+                    )
+                  },
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            )}
+            {format === 'mermaid' && (
+              <div className="flex flex-col h-full">
+                <div className="flex justify-end mb-4">
+                  <Button onClick={zoomOutMermaid} variant="outline" size="sm" className="mr-2">
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                  <Button onClick={zoomInMermaid} variant="outline" size="sm">
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="relative w-full h-full overflow-auto flex items-center justify-center">
+                  <div
+                    ref={mermaidRef}
+                    className="mermaid-diagram"
+                    style={{
+                      transform: `scale(${mermaidScale})`,
+                      transformOrigin: 'center center',
                     }}
-                >
-                    {content}
-                </ReactMarkdown>
-                ) : (
-                latexError ? (
-                    <div className="text-red-500">{latexError}</div>
+                    dangerouslySetInnerHTML={{ __html: mermaidSvg || '' }}
+                  />
+                </div>
+              </div>
+            )}
+            {format === 'latex' && (
+              <div className="h-full flex flex-col">
+                {latexError ? (
+                  <div className="text-red-500">{latexError}</div>
                 ) : isCompiling ? (
-                    <div className="text-gray-500">Compiling LaTeX...</div>
+                  <div className="text-gray-500">Compiling LaTeX...</div>
                 ) : compiledPdfUrl ? (
-                    <div className="h-full flex flex-col">
+                  <div className="h-full flex flex-col">
                     <embed 
-                        src={compiledPdfUrl} 
-                        type="application/pdf"
-                        width="100%"
-                        height="100%"
-                        className="flex-grow"
+                      src={compiledPdfUrl} 
+                      type="application/pdf"
+                      width="100%"
+                      height="100%"
+                      className="flex-grow"
                     />
                     <Button variant="outline" asChild className="mt-4">
-                        <a href={compiledPdfUrl} target="_blank" rel="noopener noreferrer">
+                      <a href={compiledPdfUrl} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="w-4 h-4 mr-2" />
                         Open PDF in new tab
-                        </a>
+                      </a>
                     </Button>
-                    </div>
+                  </div>
                 ) : (
-                    <div className="text-gray-500">Click "Compile" to see the PDF preview</div>
-                )
+                  <div className="text-gray-500">
+                    {autoCompile ? "Edit LaTeX to see preview" : "Click 'Compile' to see preview"}
+                  </div>
                 )}
-            </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -76,3 +76,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.mermaid-diagram svg {
+  height: auto;
+  width: 100%;
+}
+
+.mermaid-diagram .label {
+  font-family: 'Arial', sans-serif;
+  color: #333;
+}

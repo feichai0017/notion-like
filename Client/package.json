@@ -46,7 +46,9 @@
     "framer-motion": "^11.9.0",
     "katex": "^0.16.11",
     "latex.js": "^0.12.6",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.446.0",
+    "mermaid": "^11.2.1",
     "next": "14.2.13",
     "openai-edge": "^1.2.2",
     "pdfjs-dist": "^4.6.82",
@@ -68,6 +70,7 @@
     "tsparticles-slim": "^2.12.0"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.9",
     "@types/node": "^20",
     "@types/pdfjs-dist": "^2.10.378",
     "@types/react": "^18",

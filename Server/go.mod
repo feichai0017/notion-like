@@ -15,10 +15,7 @@ require (
 	gorm.io/gorm v1.25.12
 )
 
-require github.com/dlclark/regexp2 v1.4.0 // indirect
-
 require (
-	github.com/alecthomas/chroma v0.10.0
 	github.com/aws/aws-sdk-go-v2 v1.31.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.36 // indirect
@@ -44,7 +41,6 @@ require (
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/go-latex/latex v0.0.0-20240709081214-31cef3c7570e
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.22.1 // indirect

@@ -34,7 +34,13 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=notionlike
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /Volumes/T7/docker/notion-like/postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    command: 
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
 
   minio:
     image: minio/minio
@@ -44,15 +50,34 @@ services:
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":9001" --address ":9000"
     volumes:
-      - minio_data:/data
+      - /Volumes/T7/docker/notion-like/minio_data:/data
 
   redis:
     image: redis:6
     ports:
       - "6379:6379"
+    command: redis-server --protected-mode no
+    volumes:
+      - /Volumes/T7/docker/notion-like/redis_data:/data
 
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /Volumes/T7/docker/notion-like/postgres_data
   minio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /Volumes/T7/docker/notion-like/minio_data
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /Volumes/T7/docker/notion-like/redis_data

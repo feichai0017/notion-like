@@ -1,9 +1,9 @@
 import React from 'react'
 import { Button } from "@/components/ui/button"
-import { Bold, Italic, List, ListOrdered, Image, Code, Type, Sigma, Table } from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, Image, Code, Type, Sigma, Table, GitBranch, GitMerge, GitPullRequest } from 'lucide-react'
 
 interface FormatToolbarProps {
-  format: 'markdown' | 'latex'
+  format: 'markdown' | 'latex' | 'mermaid'
   onFormat: (type: string) => void
 }
 
@@ -23,7 +23,13 @@ export function FormatToolbar({ format, onFormat }: FormatToolbarProps) {
     { icon: Table, label: 'Matrix', action: 'matrix' },
   ]
 
-  const tools = format === 'markdown' ? markdownTools : latexTools
+  const mermaidTools = [
+    { icon: GitBranch, label: 'Flowchart', action: 'flowchart' },
+    { icon: GitMerge, label: 'Sequence Diagram', action: 'sequence' },
+    { icon: GitPullRequest, label: 'Class Diagram', action: 'class' },
+  ]
+
+  const tools = format === 'markdown' ? markdownTools : format === 'latex' ? latexTools : mermaidTools
 
   return (
     <div className="flex space-x-2 p-2 bg-morandi-bg-dark rounded-md">
