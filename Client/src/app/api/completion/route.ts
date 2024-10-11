@@ -19,31 +19,26 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export const api = {
-  // 认证相关
   register: (userData: any) => apiClient.post('/register', userData),
   login: (credentials: any) => apiClient.post('/login', credentials),
-
- // 修改 LaTeX 编译方法
- compileLatex: (latexCode: string) => 
+  compileLatex: (latexCode: string) => 
     apiClient.post('/compile-latex', { latex: latexCode }, {
-      responseType: 'json' // 确保响应类型为 JSON
+      responseType: 'json'
     }),
-
-  // 文档相关
+  compileTypst: (typstCode: string) => 
+    apiClient.post('/compile-typst', { typst: typstCode }, {
+      responseType: 'json'
+    }),
   getDocuments: () => apiClient.get('/documents'),
   getDocument: (id: string) => apiClient.get(`/documents/${id}`),
   createDocument: (documentData: any) => apiClient.post('/documents', documentData),
   updateDocument: (id: string, documentData: any) => apiClient.put(`/documents/${id}`, documentData),
   deleteDocument: (id: string) => apiClient.delete(`/documents/${id}`),
-
-  // 待办事项相关
   getTodos: () => apiClient.get('/todos'),
   getTodo: (id: string) => apiClient.get(`/todos/${id}`),
   createTodo: (todoData: any) => apiClient.post('/todos', todoData),
   updateTodo: (id: string, todoData: any) => apiClient.put(`/todos/${id}`, todoData),
   deleteTodo: (id: string) => apiClient.delete(`/todos/${id}`),
-
-  // OpenAI completion (从您提供的前端代码中添加)
   getCompletion: (prompt: string) => apiClient.post('/completion', { prompt }),
 };
 

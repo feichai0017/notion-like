@@ -18,6 +18,7 @@ func SetupRouter() *gin.Engine {
 		public.POST("/register", handlers.Register)
 		public.POST("/login", handlers.Login)
 		public.POST("/compile-latex", handlers.CompileLatex)
+		public.POST("/compile-typst", handlers.CompileTypst)
 	}
 
 	// 需要认证的路由

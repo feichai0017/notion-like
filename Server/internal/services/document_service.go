@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func CreateDocument(userID uint, title string, content []byte) (*models.Document, error) {
+func CreateDocument(userID uint, title string, content []byte, format string) (*models.Document, error) {
 	// 生成唯一的对象存储键
 	objectKey := generateUniqueKey()
 
@@ -26,6 +26,7 @@ func CreateDocument(userID uint, title string, content []byte) (*models.Document
 		UserID:           userID,
 		Title:            title,
 		ObjectStorageKey: objectKey,
+		Format:           format,
 	}
 
 	if err := db.DB.Create(document).Error; err != nil {
@@ -47,7 +48,23 @@ func GetDocumentContent(document *models.Document) ([]byte, error) {
 	return io.ReadAll(obj)
 }
 
-func UpdateDocument(document *models.Document, title string, content []byte) error {
+func GetDocument(userID uint, documentID string) (*models.Document, error) {
+	var document models.Document
+	if err := db.DB.Where("id = ? AND user_id = ?", documentID, userID).First(&document).Error; err != nil {
+		return nil, err
+	}
+	return &document, nil
+}
+
+func GetUserDocuments(userID uint) ([]models.Document, error) {
+	var documents []models.Document
+	if err := db.DB.Where("user_id = ?", userID).Find(&documents).Error; err != nil {
+		return nil, err
+	}
+	return documents, nil
+}
+
+func UpdateDocument(document *models.Document, title string, content []byte, format string) error {
 	// 更新MinIO中的文档内容
 	err := storage.UploadFile("documents", document.ObjectStorageKey, bytes.NewReader(content), int64(len(content)))
 	if err != nil {
@@ -56,6 +73,7 @@ func UpdateDocument(document *models.Document, title string, content []byte) err
 
 	// 更新数据库中的文档记录
 	document.Title = title
+	document.Format = format
 	return db.DB.Save(document).Error
 }
 

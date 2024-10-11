@@ -28,7 +28,7 @@ type SubPage = {
   content: string
 }
 
-type Format = 'latex' | 'markdown' | 'mermaid'
+type Format = 'latex' | 'markdown' | 'mermaid' | 'typst'
 
 export default function SubPageEditingPage() {
   const { id, pageId } = useParams()
@@ -43,16 +43,73 @@ export default function SubPageEditingPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [compiledPdfUrl, setCompiledPdfUrl] = useState<string | null>(null)
   const [latexError, setLatexError] = useState<string | null>(null)
+  const [typstError, setTypstError] = useState<string | null>(null)
   const [isCompiling, setIsCompiling] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [autoCompile, setAutoCompile] = useState(false)
-  const [mermaidSvg, setMermaidSvg] = useState<string | null>(null)
-  const [mermaidScale, setMermaidScale] = useState(1)
-  const pdfContainerRef = useRef<HTMLDivElement>(null)
-  const mermaidRef = useRef<HTMLDivElement>(null)
-  const [pdfPageNum, setPdfPageNum] = useState(1)
-  const [pdfNumPages, setPdfNumPages] = useState(0)
-  const pdfRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const fetchSubPage = async () => {
+      try {
+        const response = await api.getDocument(pageId as string)
+        const fetchedSubPage = response.data
+        setSubPage(fetchedSubPage)
+        setTitle(fetchedSubPage.title)
+        setContent(fetchedSubPage.content)
+        setFormat(fetchedSubPage.format as Format)
+      } catch (error) {
+        console.error('Error fetching subpage:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchSubPage()
+  }, [pageId])
+
+  const compileLatex = useCallback(debounce(async (latexContent: string) => {
+    setIsCompiling(true)
+    setLatexError(null)
+  
+    try {
+      const response = await api.compileLatex(latexContent)
+  
+      if (response.data && response.data.status === 'success' && response.data.pdfData) {
+        const pdfData = base64ToUint8Array(response.data.pdfData)
+        const pdfBlob = new Blob([pdfData], { type: 'application/pdf' })
+        const pdfUrl = URL.createObjectURL(pdfBlob)
+        setCompiledPdfUrl(pdfUrl)
+      } else {
+        throw new Error(response.data?.message || 'Compilation failed')
+      }
+    } catch (error: any) {
+      console.error('LaTeX compilation error:', error)
+      setLatexError(error.message || 'An error occurred during LaTeX compilation')
+    } finally {
+      setIsCompiling(false)
+    }
+  }, 1000), [])
+
+  const compileTypst = useCallback(debounce(async (typstContent: string) => {
+    setIsCompiling(true)
+    setTypstError(null)
+
+    try {
+      const response = await api.compileTypst(typstContent)
+
+      if (response.data && response.data.status === 'success' && response.data.pdfData) {
+        const pdfData = base64ToUint8Array(response.data.pdfData)
+        const pdfBlob = new Blob([pdfData], { type: 'application/pdf' })
+        const pdfUrl = URL.createObjectURL(pdfBlob)
+        setCompiledPdfUrl(pdfUrl)
+      } else {
+        throw new Error(response.data?.message || 'Compilation failed')
+      }
+    } catch (error: any) {
+      console.error('Typst compilation error:', error)
+      setTypstError(error.message || 'An error occurred during Typst compilation')
+    } finally {
+      setIsCompiling(false)
+    }
+  }, 1000), [])
 
   useEffect(() => {
     const fetchSubPage = async () => {
@@ -84,10 +141,14 @@ export default function SubPageEditingPage() {
   }, [content, format, isPreviewMode])
 
   useEffect(() => {
-    if (format === 'latex' && autoCompile) {
-      compileLatex(content)
+    if ((format === 'latex' || format === 'typst') && autoCompile) {
+      if (format === 'latex') {
+        compileLatex(content)
+      } else {
+        compileTypst(content)
+      }
     }
-  }, [content, format, autoCompile])
+  }, [content, format, autoCompile, compileLatex, compileTypst])
 
   const renderMermaidDiagram = async () => {
     try {
@@ -107,29 +168,26 @@ export default function SubPageEditingPage() {
 
   const handleSave = useCallback(debounce(async () => {
     setIsSaving(true)
-    // Simulating API call
-    setTimeout(() => {
+    try {
+      await api.updateDocument(pageId as string, { title, content, format })
+      console.log('Document saved successfully')
+    } catch (error) {
+      console.error('Error saving document:', error)
+    } finally {
       setIsSaving(false)
-    }, 1000)
-  }, 1000), [])
-  //   try {
-  //     await api.updateDocument(pageId as string, { title, content })
-  //   } catch (error) {
-  //     console.error('Error saving document:', error)
-  //   } finally {
-  //     setIsSaving(false)
-  //   }
-  // }, 1000), [pageId, title, content])
+    }
+  }, 1000), [pageId, title, content, format])
 
   const handleFormatChange = (newFormat: Format) => {
     setFormat(newFormat)
     setCompiledPdfUrl(null)
     setLatexError(null)
-    setIsPreviewMode(newFormat === 'latex')
+    setTypstError(null)
+    setIsPreviewMode(newFormat === 'latex' || newFormat === 'typst')
   }
 
   const togglePreviewMode = () => {
-    if (format !== 'latex') {
+    if (format !== 'latex' && format !== 'typst') {
       setIsPreviewMode(!isPreviewMode)
     }
   }
@@ -145,30 +203,6 @@ export default function SubPageEditingPage() {
   const zoomInMermaid = () => setMermaidScale(prevScale => Math.min(prevScale + 0.1, 2))
   const zoomOutMermaid = () => setMermaidScale(prevScale => Math.max(prevScale - 0.1, 0.5))
 
-  const compileLatex = useCallback(debounce(async (latexContent: string) => {
-    setIsCompiling(true)
-    setLatexError(null)
-  
-    try {
-      const response = await api.compileLatex(latexContent)
-  
-      if (response.data && response.data.status === 'success' && response.data.pdfData) {
-        const pdfData = base64ToUint8Array(response.data.pdfData)
-        const pdfBlob = new Blob([pdfData], { type: 'application/pdf' })
-        const pdfUrl = URL.createObjectURL(pdfBlob)
-        setCompiledPdfUrl(pdfUrl)
-      } else {
-        throw new Error(response.data?.message || 'Compilation failed')
-      }
-    } catch (error: any) {
-      console.error('LaTeX compilation error:', error)
-      setLatexError(error.message || 'An error occurred during LaTeX compilation')
-    } finally {
-      setIsCompiling(false)
-    }
-  }, 1000), [])
-  
-  // 更新 renderPDF 函数
   const renderPDF = async (pdfUrl: string) => {
     if (!pdfRef.current) return
   
@@ -253,12 +287,13 @@ export default function SubPageEditingPage() {
               <SelectItem value="markdown">Markdown</SelectItem>
               <SelectItem value="latex">LaTeX</SelectItem>
               <SelectItem value="mermaid">Mermaid</SelectItem>
+              <SelectItem value="typst">Typst</SelectItem>
             </SelectContent>
           </Select>
           <FormatToolbar format={format} onFormat={handleFormat} />
         </div>
         <div className="flex items-center space-x-2">
-          {format === 'latex' && (
+          {(format === 'latex' || format === 'typst') && (
             <>
               <Button
                 onClick={() => setAutoCompile(!autoCompile)}
@@ -268,7 +303,7 @@ export default function SubPageEditingPage() {
                 {autoCompile ? "Auto Compile: On" : "Auto Compile: Off"}
               </Button>
               <Button
-                onClick={() => compileLatex(content)}
+                onClick={() => format === 'latex' ? compileLatex(content) : compileTypst(content)}
                 disabled={isCompiling}
                 variant="outline"
                 className="text-sm"
@@ -277,7 +312,7 @@ export default function SubPageEditingPage() {
               </Button>
             </>
           )}
-          {format !== 'latex' && (
+          {format !== 'latex' && format !== 'typst' && (
             <Button variant="outline" onClick={togglePreviewMode} className="text-sm">
               {isPreviewMode ? <Edit2 className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
               {isPreviewMode ? 'Edit' : 'Preview'}
@@ -290,17 +325,17 @@ export default function SubPageEditingPage() {
         </div>
       </div>
       <div className="flex-grow overflow-hidden flex">
-        <div className={`${isPreviewMode || format === 'latex' ? 'w-1/2' : 'w-full'} h-full`}>
+        <div className={`${isPreviewMode || format === 'latex' || format === 'typst' ? 'w-1/2' : 'w-full'} h-full`}>
           <Editor
             content={content}
             setContent={setContent}
             isAIMode={isAIMode}
             format={format}
             onSave={handleSave}
-            isPreviewMode={isPreviewMode || format === 'latex'}
+            isPreviewMode={isPreviewMode || format === 'latex' || format === 'typst'}
           />
         </div>
-        {(isPreviewMode || format === 'latex') && (
+        {(isPreviewMode || format === 'latex' || format === 'typst') && (
           <div className="w-1/2 h-full overflow-auto p-8 bg-white rounded-lg shadow-inner">
             {format === 'markdown' && (
               <ReactMarkdown
@@ -311,7 +346,7 @@ export default function SubPageEditingPage() {
                   h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-3 mb-2" {...props} />,
                   h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-2 mb-1" {...props} />,
                   p: ({node, ...props}) => <p className="mb-4" {...props} />,
-                  ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-4" {...props} />,
+                  ul: ({node, ...props}) => <ul  className="list-disc pl-5 mb-4" {...props} />,
                   ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-4" {...props} />,
                   inlineMath: ({ node, ...props }) => <InlineMath math={props.children[0] as string} />,
                   math: ({ node, ...props }) => <BlockMath math={props.children[0] as string} />,
@@ -355,12 +390,14 @@ export default function SubPageEditingPage() {
                 </div>
               </div>
             )}
-            {format === 'latex' && (
+            {(format === 'latex' || format === 'typst') && (
               <div className="h-full flex flex-col">
-                {latexError ? (
+                {format === 'latex' && latexError ? (
                   <div className="text-red-500">{latexError}</div>
+                ) : format === 'typst' && typstError ? (
+                  <div className="text-red-500">{typstError}</div>
                 ) : isCompiling ? (
-                  <div className="text-gray-500">Compiling LaTeX...</div>
+                  <div className="text-gray-500">Compiling {format === 'latex' ? 'LaTeX' : 'Typst'}...</div>
                 ) : compiledPdfUrl ? (
                   <div className="h-full flex flex-col">
                     <embed 
@@ -379,7 +416,7 @@ export default function SubPageEditingPage() {
                   </div>
                 ) : (
                   <div className="text-gray-500">
-                    {autoCompile ? "Edit LaTeX to see preview" : "Click 'Compile' to see preview"}
+                    {autoCompile ? `Edit ${format === 'latex' ? 'LaTeX' : 'Typst'} to see preview` : "Click 'Compile' to see preview"}
                   </div>
                 )}
               </div>

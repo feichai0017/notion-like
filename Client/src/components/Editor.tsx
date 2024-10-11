@@ -12,19 +12,19 @@ interface EditorProps {
   content: string
   setContent: (content: string) => void
   isAIMode: boolean
-  format: 'latex' | 'markdown' | 'mermaid'
+  format: 'latex' | 'markdown' | 'mermaid' | 'typst'
   onSave: () => void
   isPreviewMode: boolean
 }
 
 export function Editor({
-  content,
-  setContent,
-  isAIMode,
-  format,
-  onSave,
-  isPreviewMode
-}: EditorProps) {
+                         content,
+                         setContent,
+                         isAIMode,
+                         format,
+                         onSave,
+                         isPreviewMode
+                       }: EditorProps) {
   const handleChange = useCallback((value: string) => {
     setContent(value)
   }, [setContent])
@@ -84,6 +84,17 @@ export function Editor({
           return null
         }
       })]
+    } else if (format === 'typst') {
+      return [StreamLanguage.define({
+        token(stream) {
+          if (stream.match(/^#/)) return "keyword"
+          if (stream.match(/\[.*?\]/)) return "string"
+          if (stream.match(/\$.*?\$/)) return "string"
+          if (stream.match(/=/)) return "operator"
+          stream.next()
+          return null
+        }
+      })]
     }
     return [markdown()]
   }, [format, latexLinter])
@@ -127,20 +138,20 @@ export function Editor({
   }, [])
 
   return (
-    <div className="h-full flex overflow-hidden rounded-lg shadow-inner bg-morandi-bg-light">
-      <CodeMirror
-        value={content}
-        height="100%"
-        extensions={getLanguageExtension}
-        onChange={handleChange}
-        theme={theme}
-        className="h-full w-full"
-      />
-      {isAIMode && (
-        <div className="fixed bottom-20 right-8 bg-morandi-accent text-morandi-text-primary p-4 rounded-lg shadow-lg">
-          AI Mode is active. Start typing for suggestions...
-        </div>
-      )}
-    </div>
+      <div className="h-full flex overflow-hidden rounded-lg shadow-inner bg-morandi-bg-light">
+        <CodeMirror
+            value={content}
+            height="100%"
+            extensions={getLanguageExtension}
+            onChange={handleChange}
+            theme={theme}
+            className="h-full w-full"
+        />
+        {isAIMode && (
+            <div className="fixed bottom-20 right-8 bg-morandi-accent text-morandi-text-primary p-4 rounded-lg shadow-lg">
+              AI Mode is active. Start typing for suggestions...
+            </div>
+        )}
+      </div>
   )
 }
