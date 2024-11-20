@@ -1,16 +1,21 @@
 "use client";
 
-import {ChevronsLeft, MenuIcon} from "lucide-react";
+import {ChevronsLeft, MenuIcon, PlusCircle, Search, Settings} from "lucide-react";
 import React, {ElementRef, useEffect, useRef, useState} from "react";
 import {useMediaQuery} from "usehooks-ts";
 import {usePathname} from "next/navigation";
 import {cn} from "@/lib/utils";
 import {router} from "next/client";
 import {UserItem} from "@/app/(main)/_components/user-item";
+import {Item} from "@/app/(main)/_components/item";
+import {api} from "@/convex/_generated/api";
+import {useMutation} from "convex/react";
+import {toast} from "sonner";
 
 export const Navigation = () => {
     const pathname = usePathname();
     const isMobile = useMediaQuery("(max-width: 768px)");
+    const create = useMutation(api.documents.create);
 
     const isResizingRef = useRef(false);
     const sidebarRef  = useRef<ElementRef<"aside">>(null);
@@ -92,17 +97,17 @@ export const Navigation = () => {
         }
     };
 
-    // const handleCreate = () => {
-    //    const promise = create({ title: "Untitled" }).then((documentId) =>
-    //        router.push(`/documents/${documentId}`),
-    //    );
-    //
-    //    toast.promise(promise, {
-    //        loading: "Creating a new note....",
-    //        success: "New note created.",
-    //        error: "Failed to create a note.",
-    //    });
-    //};
+    const handleCreate = () => {
+       const promise = create({ title: "Untitled" }).then((documentId) =>
+           router.push(`/documents/${documentId}`),
+       );
+
+       toast.promise(promise, {
+           loading: "Creating a new note....",
+           success: "New note created.",
+           error: "Failed to create a note.",
+       });
+    };
 
     return (
         <>
@@ -126,6 +131,9 @@ export const Navigation = () => {
                 </div>
                 <div>
                     <UserItem/>
+                    <Item label="Search" isSearch onClick={() => {}} icon={Search}/>
+                    <Item label="Settings" onClick={() => {}} icon={Settings}/>
+                    <Item onClick={handleCreate} label="New Page" icon={PlusCircle}/>
                 </div>
                 <div className="mt-4">
                     <p>Documents</p>
