@@ -11,6 +11,7 @@ import {Item} from "@/app/(main)/_components/item";
 import {api} from "@/convex/_generated/api";
 import {useMutation} from "convex/react";
 import {toast} from "sonner";
+import {DocumentList} from "@/app/(main)/_components/document-list";
 
 export const Navigation = () => {
     const pathname = usePathname();
@@ -136,7 +137,7 @@ export const Navigation = () => {
                     <Item onClick={handleCreate} label="New Page" icon={PlusCircle}/>
                 </div>
                 <div className="mt-4">
-                    <p>Documents</p>
+                    <DocumentList/>
                 </div>
                 <div
                     onMouseDown={handleMouseDown}
