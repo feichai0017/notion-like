@@ -211,3 +211,25 @@ export const remove = mutation({
         return document;
     },
 });
+
+
+export const getSearch = query({
+    handler: async (ctx) => {
+        const identity = await ctx.auth.getUserIdentity();
+
+        if (!identity) {
+            throw new Error("Unauthorized");
+        }
+
+        const userId = identity.subject;
+
+        return await ctx.db
+            .query("documents")
+            .withIndex("by_user", (q) => {
+                return q.eq("userId", userId);
+            })
+            .filter((q) => q.eq(q.field("isArchived"), false))
+            .order("desc")
+            .collect();
+    }
+});
