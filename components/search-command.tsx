@@ -15,6 +15,7 @@ import {
     CommandList
 } from "@/components/ui/command";
 import {File} from "lucide-react";
+import {DialogTitle} from "@/components/ui/dialog";
 
 export const SearchCommand = () => {
     const { user } = useUser();
@@ -54,6 +55,7 @@ export const SearchCommand = () => {
 
     return (
         <CommandDialog open={isOpen} onOpenChange={onClose}>
+            <DialogTitle className="hidden">Search</DialogTitle>
             <CommandInput
                 placeholder={`Search ${user?.fullName}'s NoteLab...`}
             />
