@@ -6,6 +6,7 @@ import {useMutation} from "convex/react";
 import {useRef, useState} from "react";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
+import {Skeleton} from "@/components/ui/skeleton";
 
 interface TitleProps {
     initialData: Doc<"documents">;
@@ -70,5 +71,11 @@ export const Title = ({initialData} : TitleProps) => {
                 </Button>
             )}
         </h1>
-    )
-}
+    );
+};
+
+Title.Skeleton = function TitleSkeleton() {
+    return (
+        <Skeleton className="h-4 w-20 rounded-md"/>
+    );
+};
