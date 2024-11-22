@@ -1,6 +1,6 @@
-import {Heading} from "@/app/(cover)/_components/heading";
-import {Heroes} from "@/app/(cover)/_components/heroes";
-import {Footer} from "@/app/(cover)/_components/footer";
+import {Heading} from "@/app/(landing)/_components/heading";
+import {Heroes} from "@/app/(landing)/_components/heroes";
+import {Footer} from "@/app/(landing)/_components/footer";
 
 export default function CoverPage () {
   return (

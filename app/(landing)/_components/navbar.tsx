@@ -2,7 +2,7 @@
 
 import {useScrollTop} from "@/hooks/use-scroll-top";
 import {cn} from "@/lib/utils";
-import {Logo} from "@/app/(cover)/_components/logo";
+import {Logo} from "@/app/(landing)/_components/logo";
 import {ModeToggle} from "@/components/mode-toggle";
 import {useConvexAuth} from "convex/react";
 import {SignInButton, UserButton} from "@clerk/clerk-react";

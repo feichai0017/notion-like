@@ -1,4 +1,4 @@
-import { Navbar }from "@/app/(cover)/_components/navbar";
+import { Navbar }from "@/app/(landing)/_components/navbar";
 import React from "react";
 
 
