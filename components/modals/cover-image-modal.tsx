@@ -32,18 +32,23 @@ export const CoverImageModal = () => {
 
             const res = await edgestore.publicFiles.upload({
                 file,
+                options: {
+                    replaceTargetUrl: coverImage.url,
+                },
             });
 
             await update({
                 id: params.documentId as Id<"documents">,
                 coverImage: res.url,
             });
+
+            onClose();
         }
-    }
+    };
 
     return (
         <Dialog open={coverImage.isOpen} onOpenChange={coverImage.onClose}>
-            <DialogTitle hidden={true} />
+            <DialogTitle hidden/>
             <DialogContent>
                 <DialogHeader>
                     <h2 className="text-center text-lg font-semibold">
