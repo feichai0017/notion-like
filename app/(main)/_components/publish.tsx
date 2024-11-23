@@ -13,7 +13,7 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, Divide, Globe } from "lucide-react";
+import { Check, Copy, Globe } from "lucide-react";
 
 interface PublishProps {
     initialData: Doc<"documents">;
